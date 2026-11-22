@@ -1,4 +1,3 @@
- 
 INSERT INTO records (title, category, description, status) VALUES
 ('Broken classroom light', 'Electrical', 'The light in Room B12 does not switch on.', 'Pending'),
 ('Leaking tap in Lab 3', 'Plumbing', 'Water is dripping from the sink tap continuously.', 'In progress'),
@@ -7,4 +6,5 @@ INSERT INTO records (title, category, description, status) VALUES
 ('Slow Wi-Fi in library', 'Network', 'Internet speed drops significantly in the reading area.', 'In progress'),
 ('Air conditioner noise', 'HVAC', 'The AC unit in Room D2 makes a loud rattling sound.', 'Pending'),
 ('Broken door lock', 'Security', 'The lock on the main office door is jammed.', 'Pending'),
-('Flickering corridor bulbs', 'Electrical', 'Corridor lights on the second floor flicker at night.', 'Completed');
+('Flickering corridor bulbs', 'Electrical', 'Corridor lights on the second floor flicker at night.', 'Completed')
+ON CONFLICT DO NOTHING;

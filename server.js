@@ -1,8 +1,7 @@
- 
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const db = require("./db");
+const pool = require("./db"); // CHANGED to pool
 
 const app = express();
 
@@ -75,9 +74,9 @@ app.get("/", (req, res) => {
 });
 
 // ---- GET /health ----
-app.get("/health", (req, res) => {
+app.get("/health", async (req, res) => {
   try {
-    db.prepare("SELECT 1 AS ok").get();
+    await pool.query("SELECT 1"); // CHANGED to pool.query
     res.status(200).json({ status: "ok", database: "ok" });
   } catch (err) {
     res.status(503).json({ status: "error", database: "unavailable", message: err.message });

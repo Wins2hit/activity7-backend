@@ -1,11 +1,9 @@
- 
 const router = require("express").Router();
-const db = require("../db");
+const pool = require("../db");
 
 const VALID_STATUSES = ["Pending", "In progress", "Completed"];
 const COLUMNS = "id, title, category, description, status";
 
-// ---- Validation ----
 function validateRecord(body) {
   const errors = [];
   const { title, category, description, status } = body || {};
@@ -35,51 +33,49 @@ function validateRecord(body) {
   return { errors, value };
 }
 
-// ---- ID helper ----
 function parseId(raw) {
   if (!/^\d+$/.test(raw)) return null;
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-// ---- GET all ----
-router.get("/", (req, res, next) => {
+// GET all
+router.get("/", async (req, res, next) => {
   try {
-    const rows = db.prepare(`SELECT ${COLUMNS} FROM records ORDER BY id`).all();
-    res.status(200).json(rows);
+    const result = await pool.query(`SELECT ${COLUMNS} FROM records ORDER BY id`);
+    res.status(200).json(result.rows);
   } catch (err) { next(err); }
 });
 
-// ---- GET one ----
-router.get("/:id", (req, res, next) => {
+// GET one
+router.get("/:id", async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (id === null)
       return res.status(400).json({ message: "id must be a positive whole number." });
 
-    const row = db.prepare(`SELECT ${COLUMNS} FROM records WHERE id = ?`).get(id);
-    if (!row) return res.status(404).json({ message: "Record not found." });
-    res.status(200).json(row);
+    const result = await pool.query(`SELECT ${COLUMNS} FROM records WHERE id = $1`, [id]);
+    if (result.rows.length === 0) return res.status(404).json({ message: "Record not found." });
+    res.status(200).json(result.rows[0]);
   } catch (err) { next(err); }
 });
 
-// ---- POST ----
-router.post("/", (req, res, next) => {
+// POST
+router.post("/", async (req, res, next) => {
   try {
     const { errors, value } = validateRecord(req.body);
     if (errors.length) return res.status(400).json({ message: errors[0] });
 
-    const info = db.prepare(
-      "INSERT INTO records (title, category, description, status) VALUES (?, ?, ?, ?)"
-    ).run(value.title, value.category, value.description, value.status);
-
-    const created = db.prepare(`SELECT ${COLUMNS} FROM records WHERE id = ?`).get(info.lastInsertRowid);
-    res.status(201).json(created);
+    const result = await pool.query(
+      "INSERT INTO records (title, category, description, status) VALUES ($1, $2, $3, $4) RETURNING *",
+      [value.title, value.category, value.description, value.status]
+    );
+    res.status(201).json(result.rows[0]);
   } catch (err) { next(err); }
 });
 
-// ---- PUT ----
-router.put("/:id", (req, res, next) => {
+// PUT
+router.put("/:id", async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (id === null)
@@ -88,29 +84,24 @@ router.put("/:id", (req, res, next) => {
     const { errors, value } = validateRecord(req.body);
     if (errors.length) return res.status(400).json({ message: errors[0] });
 
-    const info = db.prepare(
-      "UPDATE records SET title = ?, category = ?, description = ?, status = ? WHERE id = ?"
-    ).run(value.title, value.category, value.description, value.status, id);
-
-    if (info.changes === 0)
-      return res.status(404).json({ message: "Record not found." });
-
-    const updated = db.prepare(`SELECT ${COLUMNS} FROM records WHERE id = ?`).get(id);
-    res.status(200).json(updated);
+    const result = await pool.query(
+      "UPDATE records SET title = $1, category = $2, description = $3, status = $4 WHERE id = $5 RETURNING *",
+      [value.title, value.category, value.description, value.status, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: "Record not found." });
+    res.status(200).json(result.rows[0]);
   } catch (err) { next(err); }
 });
 
-// ---- DELETE ----
-router.delete("/:id", (req, res, next) => {
+// DELETE
+router.delete("/:id", async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (id === null)
       return res.status(400).json({ message: "id must be a positive whole number." });
 
-    const info = db.prepare("DELETE FROM records WHERE id = ?").run(id);
-    if (info.changes === 0)
-      return res.status(404).json({ message: "Record not found." });
-
+    const result = await pool.query("DELETE FROM records WHERE id = $1 RETURNING id", [id]);
+    if (result.rows.length === 0) return res.status(404).json({ message: "Record not found." });
     res.status(200).json({ message: "Record deleted." });
   } catch (err) { next(err); }
 });
