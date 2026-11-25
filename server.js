@@ -8,7 +8,7 @@ const app = express();
 const origins = (process.env.CLIENT_ORIGINS || "")
   .split(",").map(v => v.trim()).filter(Boolean);
 
-app.use(cors({ origin: origins }));
+app.use(cors());
 app.use(express.json());
 
 // ---- GET / : API guide ----
